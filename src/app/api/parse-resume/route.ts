@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PDFParse } from "pdf-parse";
+import { getPath } from "pdf-parse/worker";
 import mammoth from "mammoth";
-import path from "path";
 import { pathToFileURL } from "url";
 
-// Resolve and configure the absolute path to the pdfjs worker for server-side compilation
-const workerPath = path.resolve(process.cwd(), "node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs");
-const workerUrl = pathToFileURL(workerPath).href;
-PDFParse.setWorker(workerUrl);
+// Resolve and configure the absolute path to the pdfjs worker using module-relative helper
+PDFParse.setWorker(pathToFileURL(getPath()).href);
+
 
 // Monkeypatch PDFParse.prototype.getHyperlinks to bypass the bug where it skips links without overlaidText
 if (PDFParse.prototype) {
