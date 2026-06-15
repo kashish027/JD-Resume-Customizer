@@ -206,17 +206,20 @@ CRITICAL INSTRUCTIONS FOR TAILORING:
 2. USE THE ACTION-IMPACT STRUCTURE:
    - Ensure tailored bullets start with a strong, past-tense action verb (or present-tense for current positions) that matches the active style of the JD.
    - Wherever the original bullet provides metrics or outcomes, structure the rewritten bullet to emphasize the action taken and its direct impact (e.g. "Spearheaded [X], resulting in [Y] by implementing [Z]").
-
-3. NO FABRICATION OR EXTRA-POLATION:
+` +
+/*
+`3. NO FABRICATION OR EXTRA-POLATION:
    - You must NOT invent, exaggerate, or fabricate any numbers, percentages, metrics, or accomplishments that the candidate did not list. 
-   - If the candidate listed specific skills (e.g., Python, SQL, React) in their "skills" section, you may contextually mention them in experience/project bullets to explain *how* they completed the task, but ONLY if those skills are already present somewhere in the resume. Never introduce technologies or credentials the candidate does not possess.
-
+   - If the candidate listed specific skills (e.g., Python, SQL, React) in their "skills" section, you may contextually mention them in experience/project bullets to explain *how* they completed the task, but ONLY if those skills are already present somewhere in the resume. Never introduce technologies or credentials the candidate does not possess.`
+*/
+`
 4. PRESERVE ORIGINAL DATA:
    - Keep all company names, dates, project titles, school names, degrees, and locations exactly as they are.
    - If a bullet contains links, email addresses, or URLs (plain text or markdown like [text](url)), you MUST keep them exactly as they are. Do not remove or modify them.
 
 5. PROVIDE CLEAR JUSTIFICATIONS:
    - For every suggested change, provide a short, professional "reason" explaining which requirement from the JD the change addresses and why it helps the candidate.
+
 
 6. RETURN UNCHANGED IF UNRELATED:
    - If a bullet point has absolutely no relevance or alignment opportunity with the JD, return the original text.
