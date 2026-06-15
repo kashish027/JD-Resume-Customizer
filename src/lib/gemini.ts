@@ -192,23 +192,37 @@ export async function customizeResume(
   jobDescription: string,
   apiKey: string
 ): Promise<TailoredSuggestions> {
-  const prompt = `You are an expert resume customizer. You will help tailor a job seeker's resume bullet points (experience and projects) to strongly match a Job Description (JD).
-Your goal is to rephrase and adapt the bullet points in the experience and projects sections to align with the keywords, tools, methodologies, and responsibilities demanded in the JD.
+  const prompt = `You are an expert resume writer and customization assistant. Your task is to tailor a candidate's resume (specifically their work experience and project description bullet points) to align strongly with a target Job Description (JD).
 
-CRITICAL RULES:
-1. ACTIVE ALIGNMENT WITHOUT FABRICATION: For each bullet point in the experience and projects sections, compare it with the JD. If the bullet point touches upon a topic, technology, or responsibility mentioned in the JD, actively rephrase the bullet point to align with the JD's terminology and keywords (e.g., if the JD asks for "Scrum delivery" and the bullet describes "delivering features in sprints", rephrase it to use "Scrum/Agile delivery"). Be proactive in identifying these alignment opportunities rather than leaving bullets unchanged.
-2. PRESERVE CORE FACTS AND ACCOMPLISHMENTS: Do NOT entirely change the actual content or invent new tasks/responsibilities that the candidate did not do. Keep the core accomplishment, scope, and context of the original bullet.
-3. NO HALLUCINATION: Only rephrase or emphasize the EXACT details and accomplishments the user already provided. DO NOT invent, exaggerate, or fabricate any new numbers, metrics (e.g. do not invent "increased performance by 30%" or "saved 20% cost" if not present in the original bullet), technologies they didn't list, companies, dates, or degrees.
-4. Keep all company names, school names, dates, locations, and personal details untouched.
-5. Propose a tailored version for each bullet point where there is any relevant JD concept to align with, or return the original text if the bullet is completely unrelated to the JD.
-6. Provide a brief explanation (reason) for each change.
-7. If the original text contains any links, email addresses, or URLs (plain text or Markdown format like [text](url)), you MUST keep them exactly as they are. Do not remove, modify, or break any links.
+We are providing you with the candidate's full profile (including skills, summary, work experience, and education) to give you rich context on their background. Your modifications must only affect the Work Experience and Projects bullet points.
 
-Input Resume Work Experience:
-${JSON.stringify(resume.workExperience, null, 2)}
+CRITICAL INSTRUCTIONS FOR TAILORING:
+1. ACTIVE ALIGNMENT & REFRAMING:
+   - Carefully review the target Job Description to identify core responsibilities, key terms, tools, methodologies, and phrases.
+   - For every single bullet point in Work Experience and Projects, determine if the activity described relates directly or indirectly to requirements in the JD.
+   - If there is a connection, actively rewrite and reframe the bullet point to highlight the matching skills, terminology, and keywords from the JD. For example, if the JD requires "agile product lifecycle management" and the original bullet describes "leading development from start to launch", rewrite it to frame it as "managed the end-to-end Agile product lifecycle from conception to launch."
+   - Do not perform simple word-for-word synonym replacement. Instead, restructure the bullet points to lead with the most relevant accomplishments and skills matching the JD.
 
-Input Resume Projects:
-${JSON.stringify(resume.projects, null, 2)}
+2. USE THE ACTION-IMPACT STRUCTURE:
+   - Ensure tailored bullets start with a strong, past-tense action verb (or present-tense for current positions) that matches the active style of the JD.
+   - Wherever the original bullet provides metrics or outcomes, structure the rewritten bullet to emphasize the action taken and its direct impact (e.g. "Spearheaded [X], resulting in [Y] by implementing [Z]").
+
+3. NO FABRICATION OR EXTRA-POLATION:
+   - You must NOT invent, exaggerate, or fabricate any numbers, percentages, metrics, or accomplishments that the candidate did not list. 
+   - If the candidate listed specific skills (e.g., Python, SQL, React) in their "skills" section, you may contextually mention them in experience/project bullets to explain *how* they completed the task, but ONLY if those skills are already present somewhere in the resume. Never introduce technologies or credentials the candidate does not possess.
+
+4. PRESERVE ORIGINAL DATA:
+   - Keep all company names, dates, project titles, school names, degrees, and locations exactly as they are.
+   - If a bullet contains links, email addresses, or URLs (plain text or markdown like [text](url)), you MUST keep them exactly as they are. Do not remove or modify them.
+
+5. PROVIDE CLEAR JUSTIFICATIONS:
+   - For every suggested change, provide a short, professional "reason" explaining which requirement from the JD the change addresses and why it helps the candidate.
+
+6. RETURN UNCHANGED IF UNRELATED:
+   - If a bullet point has absolutely no relevance or alignment opportunity with the JD, return the original text.
+
+Input Resume (Full Profile for Context):
+${JSON.stringify(resume, null, 2)}
 
 Target Job Description:
 """
@@ -240,3 +254,4 @@ Output the recommendations strictly in the following JSON format:
   const responseText = await callGemini(prompt, apiKey, 0.35);
   return JSON.parse(responseText.trim()) as TailoredSuggestions;
 }
+
