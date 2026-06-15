@@ -15,7 +15,9 @@ export async function GET(request: NextRequest) {
   const email = searchParams.get("email");
   const token = searchParams.get("token");
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const host = request.headers.get("host");
+  const protocol = request.headers.get("x-forwarded-proto") || "http";
+  const appUrl = host ? `${protocol}://${host}` : (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000");
   const expectedToken = process.env.ADMIN_APPROVAL_SECRET || "default_secret";
 
   const renderHTML = (title: string, message: string, detail: string, isSuccess: boolean) => {

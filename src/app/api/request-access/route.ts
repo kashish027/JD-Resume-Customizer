@@ -79,7 +79,9 @@ export async function POST(request: NextRequest) {
     if (adminEmail && smtpUser && smtpPass) {
       const smtpHost = process.env.SMTP_HOST || "smtp.gmail.com";
       const smtpPort = parseInt(process.env.SMTP_PORT || "465");
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+      const host = request.headers.get("host");
+      const protocol = request.headers.get("x-forwarded-proto") || "http";
+      const appUrl = host ? `${protocol}://${host}` : (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000");
       const approvalSecret = process.env.ADMIN_APPROVAL_SECRET || "default_secret";
 
       const approvalUrl = `${appUrl}/api/approve-access?email=${encodeURIComponent(normalizedEmail)}&token=${encodeURIComponent(approvalSecret)}`;
