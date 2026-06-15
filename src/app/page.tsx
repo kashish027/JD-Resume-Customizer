@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
-import { Sparkles, CheckCircle, Shield, FileText, Lock, Mail, ArrowRight } from "lucide-react";
+import { Sparkles, CheckCircle, Shield, FileText, Lock, Mail, ArrowRight, ChevronLeft } from "lucide-react";
 
 export default function AuthPage() {
   const router = useRouter();
@@ -14,6 +14,11 @@ export default function AuthPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+
+  // Access Flow States
+  const [emailVerified, setEmailVerified] = useState(false);
+  const [isPending, setIsPending] = useState(false);
+  const [accessRequested, setAccessRequested] = useState(false);
 
   // Set mounted state
   useEffect(() => {
@@ -32,6 +37,66 @@ export default function AuthPage() {
     };
     checkUser();
   }, [router]);
+
+  const handleCheckEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setMessage(null);
+
+    if (!email) {
+      setError("Please enter your email address.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/check-email?email=${encodeURIComponent(email.trim())}`);
+      const data = await res.json();
+
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      if (data.status === "approved") {
+        setEmailVerified(true);
+      } else if (data.status === "pending") {
+        setIsPending(true);
+      } else {
+        setError("This email is not approved for access yet.");
+      }
+    } catch (err: any) {
+      setError(err.message || "Failed to verify email access status.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRequestAccess = async () => {
+    setError(null);
+    setMessage(null);
+    setLoading(true);
+
+    try {
+      const res = await fetch("/api/request-access", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim() }),
+      });
+
+      const data = await res.json();
+
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      setAccessRequested(true);
+      setMessage("Access request submitted successfully!");
+    } catch (err: any) {
+      setError(err.message || "Failed to request access.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,7 +118,7 @@ export default function AuthPage() {
     try {
       if (isLogin) {
         const { data, error: signInError } = await supabase.auth.signInWithPassword({
-          email,
+          email: email.trim(),
           password,
         });
 
@@ -62,7 +127,7 @@ export default function AuthPage() {
         router.push("/dashboard");
       } else {
         const { data, error: signUpError } = await supabase.auth.signUp({
-          email,
+          email: email.trim(),
           password,
           options: {
             emailRedirectTo: typeof window !== "undefined" ? window.location.origin : "",
@@ -78,6 +143,14 @@ export default function AuthPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleBack = () => {
+    setEmailVerified(false);
+    setIsPending(false);
+    setAccessRequested(false);
+    setError(null);
+    setMessage(null);
   };
 
   return (
@@ -144,92 +217,173 @@ export default function AuthPage() {
           </div>
         </div>
 
-        {/* Right Side: Auth Card */}
+        {/* Right Side: Access Control / Auth Card */}
         <div className="glass-card" style={{ maxWidth: "450px", width: "100%", justifySelf: "end" }}>
-          <h2 style={{ fontSize: "1.75rem", marginBottom: "0.5rem" }}>
-            {isLogin ? "Welcome Back" : "Create Account"}
-          </h2>
-          <p style={{ color: "var(--text-secondary)", fontSize: "0.9rem", marginBottom: "2rem" }}>
-            {isLogin ? "Sign in to access your resumes & history" : "Get started adapting your resumes for free"}
-          </p>
-
-          {mounted && !isSupabaseConfigured && (
-            <div className="alert alert-error" style={{ marginBottom: "1.5rem" }}>
-              <div>
-                <p style={{ fontWeight: 600 }}>Supabase Credentials Required</p>
-                <p style={{ fontSize: "0.8rem", marginTop: "0.25rem" }}>
-                  To enable authentication and database storing, please copy <code>.env.example</code> to <code>.env.local</code> and fill in:
-                </p>
-                <code style={{ display: "block", background: "rgba(0,0,0,0.3)", padding: "0.5rem", borderRadius: "4px", fontSize: "0.75rem", marginTop: "0.5rem", overflowX: "auto" }}>
-                  NEXT_PUBLIC_SUPABASE_URL=...<br />
-                  NEXT_PUBLIC_SUPABASE_ANON_KEY=...
-                </code>
+          
+          {/* STATE A: Access Request Success Screen */}
+          {accessRequested ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+              <h2 style={{ fontSize: "1.75rem", color: "var(--secondary)" }}>Access Requested</h2>
+              <p style={{ color: "var(--text-secondary)", lineHeight: "1.6" }}>
+                An access request for <strong>{email}</strong> has been sent to the administrator.
+              </p>
+              <p style={{ color: "var(--text-muted)", fontSize: "0.9rem" }}>
+                You will receive a confirmation email once your access is approved. You can then return here to complete your registration.
+              </p>
+              <button onClick={handleBack} className="btn btn-secondary" style={{ width: "100%", padding: "0.85rem", marginTop: "1rem", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem" }}>
+                <ChevronLeft size={16} />
+                <span>Try Another Email</span>
+              </button>
+            </div>
+          ) 
+          
+          /* STATE B: Access Pending Screen */
+          : isPending ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+              <h2 style={{ fontSize: "1.75rem", color: "#f59e0b" }}>Request Pending</h2>
+              <p style={{ color: "var(--text-secondary)", lineHeight: "1.6" }}>
+                An access request for <strong>{email}</strong> is currently pending approval.
+              </p>
+              <p style={{ color: "var(--text-muted)", fontSize: "0.9rem" }}>
+                Please monitor your inbox for the approval confirmation. If you believe this is an error, please try another email.
+              </p>
+              <button onClick={handleBack} className="btn btn-secondary" style={{ width: "100%", padding: "0.85rem", marginTop: "1rem", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem" }}>
+                <ChevronLeft size={16} />
+                <span>Try Another Email</span>
+              </button>
+            </div>
+          )
+          
+          /* STATE C: Approved Auth Form (Login/Register) */
+          : emailVerified ? (
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "1.5rem" }}>
+                <button onClick={handleBack} style={{ background: "none", border: "none", color: "var(--text-muted)", display: "flex", alignItems: "center", cursor: "pointer", padding: 0 }}>
+                  <ChevronLeft size={20} />
+                  <span style={{ fontSize: "0.85rem" }}>Back</span>
+                </button>
               </div>
+
+              <h2 style={{ fontSize: "1.75rem", marginBottom: "0.5rem" }}>
+                {isLogin ? "Welcome Back" : "Create Account"}
+              </h2>
+              <p style={{ color: "var(--text-secondary)", fontSize: "0.9rem", marginBottom: "1.5rem" }}>
+                {isLogin ? "Sign in to access your resumes & history" : "Get started adapting your resumes for free"}
+              </p>
+
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", background: "rgba(139, 92, 246, 0.1)", border: "1px solid rgba(139, 92, 246, 0.2)", borderRadius: "8px", padding: "0.75rem 1rem", marginBottom: "1.5rem" }}>
+                <Mail size={16} color="var(--primary)" />
+                <span style={{ fontSize: "0.9rem", color: "#c084fc", fontWeight: 500 }}>{email}</span>
+              </div>
+
+              {error && <div className="alert alert-error">{error}</div>}
+              {message && <div className="alert alert-success">{message}</div>}
+
+              <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label" htmlFor="password">Password</label>
+                  <div style={{ position: "relative" }}>
+                    <Lock size={16} color="var(--text-muted)" style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)" }} />
+                    <input
+                      type="password"
+                      id="password"
+                      className="form-input"
+                      style={{ paddingLeft: "2.5rem" }}
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      disabled={loading}
+                    />
+                  </div>
+                </div>
+
+                <button type="submit" className="btn btn-primary" style={{ width: "100%", padding: "0.85rem", marginTop: "1rem" }} disabled={loading}>
+                  {loading ? (
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                      <div className="spinner" style={{ width: "18px", height: "18px" }}></div>
+                      <span>Processing...</span>
+                    </div>
+                  ) : (
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                      <span>{isLogin ? "Sign In" : "Register"}</span>
+                      <ArrowRight size={16} />
+                    </div>
+                  )}
+                </button>
+              </form>
+
+              <div style={{ textAlign: "center", marginTop: "1.5rem" }}>
+                <button
+                  onClick={() => setIsLogin(!isLogin)}
+                  style={{ background: "none", border: "none", color: "var(--primary)", fontSize: "0.9rem", cursor: "pointer" }}
+                  disabled={loading}
+                >
+                  {isLogin ? "Don't have an account? Sign Up" : "Already have an account? Sign In"}
+                </button>
+              </div>
+            </div>
+          )
+          
+          /* STATE D: Initial Screening Screen (Check Email / Request Access) */
+          : (
+            <div>
+              <h2 style={{ fontSize: "1.75rem", marginBottom: "0.5rem" }}>Access Control</h2>
+              <p style={{ color: "var(--text-secondary)", fontSize: "0.9rem", marginBottom: "2rem" }}>
+                Enter your email address. If you've been approved, you will proceed to login. Otherwise, you can request access.
+              </p>
+
+              {error && (
+                <div className="alert alert-error" style={{ marginBottom: "1.5rem" }}>
+                  <p>{error}</p>
+                  {error.includes("not approved") && (
+                    <button
+                      onClick={handleRequestAccess}
+                      className="btn btn-primary"
+                      style={{ width: "100%", padding: "0.65rem", marginTop: "0.75rem", fontSize: "0.85rem" }}
+                      disabled={loading}
+                    >
+                      {loading ? "Submitting Request..." : "Request Access Now"}
+                    </button>
+                  )}
+                </div>
+              )}
+              {message && <div className="alert alert-success">{message}</div>}
+
+              <form onSubmit={handleCheckEmail} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label" htmlFor="email">Email Address</label>
+                  <div style={{ position: "relative" }}>
+                    <Mail size={16} color="var(--text-muted)" style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)" }} />
+                    <input
+                      type="email"
+                      id="email"
+                      className="form-input"
+                      style={{ paddingLeft: "2.5rem" }}
+                      placeholder="name@example.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      disabled={loading}
+                    />
+                  </div>
+                </div>
+
+                <button type="submit" className="btn btn-primary" style={{ width: "100%", padding: "0.85rem", marginTop: "1rem" }} disabled={loading}>
+                  {loading ? (
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                      <div className="spinner" style={{ width: "18px", height: "18px" }}></div>
+                      <span>Verifying...</span>
+                    </div>
+                  ) : (
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                      <span>Continue</span>
+                      <ArrowRight size={16} />
+                    </div>
+                  )}
+                </button>
+              </form>
             </div>
           )}
 
-          {error && <div className="alert alert-error">{error}</div>}
-          {message && <div className="alert alert-success">{message}</div>}
-
-          <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label className="form-label" htmlFor="email">Email Address</label>
-              <div style={{ position: "relative" }}>
-                <Mail size={16} color="var(--text-muted)" style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)" }} />
-                <input
-                  type="email"
-                  id="email"
-                  className="form-input"
-                  style={{ paddingLeft: "2.5rem" }}
-                  placeholder="name@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  disabled={loading}
-                />
-              </div>
-            </div>
-
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label className="form-label" htmlFor="password">Password</label>
-              <div style={{ position: "relative" }}>
-                <Lock size={16} color="var(--text-muted)" style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)" }} />
-                <input
-                  type="password"
-                  id="password"
-                  className="form-input"
-                  style={{ paddingLeft: "2.5rem" }}
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  disabled={loading}
-                />
-              </div>
-            </div>
-
-            <button type="submit" className="btn btn-primary" style={{ width: "100%", padding: "0.85rem", marginTop: "1rem" }} disabled={loading}>
-              {loading ? (
-                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                  <div className="spinner" style={{ width: "18px", height: "18px" }}></div>
-                  <span>Processing...</span>
-                </div>
-              ) : (
-                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                  <span>{isLogin ? "Sign In" : "Register"}</span>
-                  <ArrowRight size={16} />
-                </div>
-              )}
-            </button>
-          </form>
-
-          <div style={{ textAlign: "center", marginTop: "1.5rem" }}>
-            <button
-              onClick={() => setIsLogin(!isLogin)}
-              style={{ background: "none", border: "none", color: "var(--primary)", fontSize: "0.9rem", cursor: "pointer" }}
-              disabled={loading}
-            >
-              {isLogin ? "Don't have an account? Sign Up" : "Already have an account? Sign In"}
-            </button>
-          </div>
         </div>
       </main>
     </div>

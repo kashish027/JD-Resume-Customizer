@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 import { ResumePDF } from "@/components/ResumePDF";
 import { 
-  Plus, Settings, LogOut, FileText, Download, Trash2, Calendar, 
-  Briefcase, Building, Key, X, ExternalLink, HelpCircle 
+  Plus, LogOut, FileText, Download, Trash2, Calendar, 
+  Briefcase, Building 
 } from "lucide-react";
 
 export default function Dashboard() {
@@ -15,8 +15,6 @@ export default function Dashboard() {
   const [history, setHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [customApiKey, setCustomApiKey] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -38,11 +36,6 @@ export default function Dashboard() {
     };
     checkUser();
 
-    // Load custom API key from localStorage if present
-    if (typeof window !== "undefined") {
-      const savedKey = localStorage.getItem("gemini_api_key");
-      if (savedKey) setCustomApiKey(savedKey);
-    }
   }, [router]);
 
   const fetchHistory = async (userId: string) => {
@@ -121,21 +114,6 @@ export default function Dashboard() {
     }
   };
 
-  const saveApiKey = () => {
-    try {
-      if (customApiKey.trim()) {
-        localStorage.setItem("gemini_api_key", customApiKey.trim());
-        setSuccess("Gemini API key saved to your browser storage.");
-      } else {
-        localStorage.removeItem("gemini_api_key");
-        setSuccess("Custom API key removed. Will use server key if available.");
-      }
-      setIsModalOpen(false);
-      setTimeout(() => setSuccess(null), 3000);
-    } catch (err) {
-      setError("Failed to save the API key.");
-    }
-  };
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -150,10 +128,7 @@ export default function Dashboard() {
           Resume Adapt
         </div>
         <div style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
-          <button className="btn btn-secondary" style={{ padding: "0.5rem 1rem" }} onClick={() => setIsModalOpen(true)}>
-            <Settings size={16} />
-            <span>API Settings</span>
-          </button>
+
           <button className="btn btn-danger" style={{ padding: "0.5rem 1rem" }} onClick={handleSignOut}>
             <LogOut size={16} />
             <span>Sign Out</span>
@@ -256,57 +231,7 @@ export default function Dashboard() {
         )}
       </main>
 
-      {/* API Key settings modal */}
-      {isModalOpen && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                <Key size={20} color="var(--primary)" />
-                <h3 style={{ fontSize: "1.25rem" }}>Gemini API Settings</h3>
-              </div>
-              <button 
-                style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer" }}
-                onClick={() => setIsModalOpen(false)}
-              >
-                <X size={20} />
-              </button>
-            </div>
 
-            <p style={{ fontSize: "0.9rem", color: "var(--text-secondary)", lineHeight: "1.5", marginBottom: "1.5rem" }}>
-              If you haven't set the <code>GEMINI_API_KEY</code> on your server, you can supply your own personal API key here. It will only be stored locally in your browser cache.
-            </p>
-
-            <div className="form-group">
-              <label className="form-label" htmlFor="apiKey">Gemini API Key</label>
-              <input
-                type="password"
-                id="apiKey"
-                className="form-input"
-                placeholder="AIzaSy..."
-                value={customApiKey}
-                onChange={(e) => setCustomApiKey(e.target.value)}
-              />
-            </div>
-
-            <div style={{ display: "flex", gap: "0.5rem", fontSize: "0.75rem", color: "var(--text-muted)", background: "rgba(255,255,255,0.02)", padding: "0.75rem", borderRadius: "8px", border: "1px solid var(--border-color)", marginBottom: "1.5rem", lineHeight: "1.4" }}>
-              <HelpCircle size={16} style={{ flexShrink: 0 }} />
-              <span>
-                You can obtain a free Gemini API key from the <a href="https://aistudio.google.com/" target="_blank" rel="noopener noreferrer" style={{ color: "var(--secondary)", textDecoration: "underline" }}>Google AI Studio <ExternalLink size={10} style={{ display: "inline" }} /></a>.
-              </span>
-            </div>
-
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.75rem" }}>
-              <button className="btn btn-secondary" onClick={() => setIsModalOpen(false)}>
-                Cancel
-              </button>
-              <button className="btn btn-primary" onClick={saveApiKey}>
-                Save Key
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

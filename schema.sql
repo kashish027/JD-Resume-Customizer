@@ -89,3 +89,43 @@ $$ language plpgsql security definer;
 create or replace trigger on_auth_user_created
   after insert on auth.users
   for each row execute procedure public.handle_new_user();
+
+
+-- 5. ALLOWED EMAILS
+-- Only emails in this table can register or sign in
+create table public.allowed_emails (
+  email text primary key,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- Enable RLS
+alter table public.allowed_emails enable row level security;
+
+-- 6. ACCESS REQUESTS
+-- Track requests from users
+create table public.access_requests (
+  id uuid default gen_random_uuid() primary key,
+  email text not null unique,
+  status text not null default 'pending', -- 'pending', 'approved', 'rejected'
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- Enable RLS
+alter table public.access_requests enable row level security;
+
+-- 7. SECURE SIGNUP TRIGGER
+-- Blocks user signup if their email is not present in allowed_emails
+create or replace function public.check_allowed_email()
+returns trigger as $$
+begin
+  if not exists (select 1 from public.allowed_emails where email = new.email) then
+    raise exception 'Email % is not approved for access.', new.email;
+  end if;
+  return new;
+end;
+$$ language plpgsql security definer;
+
+create or replace trigger check_allowed_email_trigger
+  before insert on auth.users
+  for each row execute procedure public.check_allowed_email();
+
